@@ -30,6 +30,20 @@ yarn-error.log*
 .env*.local
 backend/.env
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Backend
+backend/faiss_index/
+logs/
+*.log
+
 # vercel
 .vercel
 
