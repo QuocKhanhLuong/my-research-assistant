@@ -26,7 +26,23 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
+.env
 .env*.local
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Backend
+backend/faiss_index/
+logs/
+*.log
 
 # vercel
 .vercel
