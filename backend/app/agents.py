@@ -368,7 +368,15 @@ async def deep_research_node(state: AgentState) -> dict:
             visited_urls=result.visited_urls
         )
         
-        response_msg = AIMessage(content=report)
+        # Wrap report in artifact tags for frontend display
+        artifact_content = f"""Here is the research report:
+
+---REPORT START---
+{report}
+---REPORT END---
+"""
+        
+        response_msg = AIMessage(content=artifact_content)
         
         return {
             "messages": [response_msg],
