@@ -1,0 +1,61 @@
+# Docker Compose - Chatbot BDHVS Monorepo
+# Development & Production orchestration
+
+version: '3.9'
+
+services:
+  # ===========================================
+  # Frontend - Next.js 15 Application
+  # ===========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chatbot-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PYTHON_BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+
+  # ===========================================
+  # Backend - Python FastAPI RAG Service
+  # ===========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatbot-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - MEGALLM_API_KEY=${MEGALLM_API_KEY}
+    volumes:
+      # Persist vector database
+      - backend-data:/app/data/faiss_index
+      # Mount PDF directory for development
+      - ./backend/data/pdf:/app/data/pdf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+
+networks:
+  chatbot-network:
+    driver: bridge
+
+volumes:
+  backend-data:
+    driver: local
