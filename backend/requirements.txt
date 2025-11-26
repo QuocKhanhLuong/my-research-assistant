@@ -25,6 +25,9 @@ aiosqlite>=0.20.0
 # Web Search Tool
 tavily-python>=0.5.0
 
+# ArXiv Paper Search
+arxiv>=2.1.0
+
 # Local Embeddings (FastEmbed - no API needed)
 fastembed>=0.5.0
 

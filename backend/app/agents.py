@@ -34,7 +34,13 @@ from app.tools import (
     DocumentRetrieverTool,
     deep_research_tool,
     deep_research,
-    write_final_report
+    write_final_report,
+    # Deep Research V2 (enhanced)
+    deep_research_v2,
+    deep_research_stream_v2,
+    write_final_report_v2,
+    ResearchConfig,
+    ResearchStage,
 )
 
 
@@ -331,7 +337,14 @@ async def general_node(state: AgentState) -> dict:
 
 
 async def deep_research_node(state: AgentState) -> dict:
-    """Deep Research agent - recursive multi-iteration research."""
+    """Deep Research agent - enhanced recursive multi-iteration research.
+    
+    Uses deep_research_v2 with:
+    - Pydantic structured output
+    - Concurrent processing with semaphore
+    - Learnings accumulation
+    - ArXiv paper integration
+    """
     messages = state.get("messages", [])
     last_message = messages[-1].content if messages else ""
     
@@ -341,38 +354,71 @@ async def deep_research_node(state: AgentState) -> dict:
     
     status_updates = []
     
-    # Progress callback
+    # Progress callback for v2
     def on_progress(progress):
         status_updates.append({
             "type": "status",
-            "stage": progress.stage,
+            "stage": progress.stage.value if hasattr(progress.stage, 'value') else str(progress.stage),
             "message": progress.message,
             "depth": progress.current_depth,
+            "total_depth": progress.total_depth,
             "breadth": progress.current_breadth,
-            "current_query": progress.current_query
+            "total_breadth": progress.total_breadth,
+            "current_query": progress.current_query,
+            "progress_percent": progress.progress_percent,
+            "learnings_count": progress.learnings_count,
+            "sources_count": progress.sources_count,
+            "completed_queries": progress.completed_queries,
+            "total_queries": progress.total_queries
         })
     
-    # Run deep research
+    # Configure v2 research
+    config = ResearchConfig(
+        breadth=4,
+        depth=2,
+        concurrency_limit=2,
+        include_arxiv=True,
+        language="vi",
+        max_results_per_search=5
+    )
+    
+    # Run deep research v2
     try:
-        result = await deep_research(
+        result = await deep_research_v2(
             query=str(last_message),
-            breadth=4,
-            depth=2,
+            config=config,
             on_progress=on_progress
         )
         
-        # Generate report
-        report = await write_final_report(
+        # Generate report using v2
+        report = await write_final_report_v2(
             prompt=str(last_message),
             learnings=result.learnings,
-            visited_urls=result.visited_urls
+            visited_urls=result.visited_urls,
+            language=config.language
         )
+        
+        # Build metadata for frontend
+        metadata_section = f"""
+## Research Statistics
+- **Total Sources**: {len(result.visited_urls)}
+- **Total Learnings**: {len(result.learnings)}
+- **Search Iterations**: {result.total_searches}
+- **Max Depth Reached**: {result.max_depth_reached}
+
+"""
         
         # Wrap report in artifact tags for frontend display
         artifact_content = f"""Here is the research report:
 
 ---REPORT START---
-{report}
+{metadata_section}{report}
+
+### Follow-up Questions
+{chr(10).join(f"- {q}" for q in result.follow_up_questions[:5]) if result.follow_up_questions else "- No follow-up questions generated"}
+
+### Sources
+{chr(10).join(f"- {url}" for url in result.visited_urls[:20]) if result.visited_urls else "- No sources found"}
 ---REPORT END---
 """
         
